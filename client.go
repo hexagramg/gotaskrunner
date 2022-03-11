@@ -196,11 +196,17 @@ var IterTimer time.Duration = time.Hour
 //polling launching of tasks when they are ready
 func (c *Client) feeder_thread(output chan<- *TaskWrapper) {
 	ticker := time.NewTicker(c.ticks)
-	timer := time.NewTimer(IterTimer)
+	ticker_log := time.NewTicker(IterTimer)
 	for {
 		select {
-		case <-timer.C:
-			log.Printf("RUNNER %T, name:%v, active:%v, working:%v", c, c.name, c.active.Get(), c.working.Get())
+		case <-ticker_log.C:
+			c.wrappers_sync.RLock()
+			var time_until_next_task time.Duration
+			if len(c.wrappers) > 0 {
+				time_until_next_task = time.Until(c.wrappers[0].GetTime())
+			}
+			c.wrappers_sync.RUnlock()
+			log.Printf("RUNNER %T, name:%v, state:%v, active:%v, working:%v, next_task_in:%v", c, c.name, c.GetState(), c.active.Get(), c.working.Get(), time_until_next_task)
 		case <-c.ctx.Done():
 			return
 		case <-ticker.C:
